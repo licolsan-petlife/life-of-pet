@@ -102,6 +102,75 @@ services:
       - default
       - nginx
 
+  elk_elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+    container_name: elk_elasticsearch
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+    restart: always
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
+      discovery.type: single-node
+
+  elk_logstash:
+    image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
+    container_name: elk_logstash
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    restart: always
+    ports:
+      - 5000:5000
+      - 5044:5044
+      - 9600:9600
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELK_ELASTIC_USER: ${ELK_ELASTIC_USER}
+      ELK_ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
+    depends_on:
+      - elk_elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9600"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  elk_kibana:
+    image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
+    container_name: elk_kibana
+    volumes:
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    restart: always
+    environment:
+      ELK_ELASTIC_USER: ${ELK_ELASTIC_USER}
+      ELK_ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
+    depends_on:
+      - elk_elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - default
+      - nginx
+
+  elk_grafana:
+    image: grafana/grafana:6.7.3-ubuntu
+    container_name: elk_grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${ELK_GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${ELK_GF_SECURITY_ADMIN_PASSWORD}
+      GF_INSTALL_PLUGINS: ${ELK_GF_INSTALL_PLUGINS}
+    networks:
+      - default
+      - nginx
+
 networks:
   default:
 

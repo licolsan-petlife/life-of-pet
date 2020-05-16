@@ -21,6 +21,13 @@ up_airflow:
 		airflow_worker \
 		airflow_jupyter
 
+up_elk:
+	${DC} up -d \
+		elk_elasticsearch \
+		elk_logstash \
+		elk_kibana \
+		elk_grafana
+
 up:
 	${DC} up -d
 

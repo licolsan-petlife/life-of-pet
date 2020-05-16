@@ -1,0 +1,110 @@
+version: "3.0"
+
+services:
+  airflow_redis:
+    image: redis:3.2.7-alpine
+    container_name: airflow_redis
+    command: redis-server --requirepass redis_secret
+    restart: always
+
+  airflow_postgres:
+    image: postgres:10-alpine
+    container_name: airflow_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
+      POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+
+  airflow_pgadmin:
+    image: dpage/pgadmin4:4.21
+    container_name: airflow_pgadmin
+    restart: always
+    depends_on:
+      - airflow_postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${AIRFLOW_PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${AIRFLOW_PGADMIN_DEFAULT_PASSWORD}
+    networks:
+      - default
+      - nginx
+
+  airflow_webserver:
+    image: airflow-base:1.10.10
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+      - airflow_postgres
+      - airflow_redis
+    environment:
+      LOAD_EX: ${AIRFLOW_LOAD_EX}
+      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    volumes:
+      - ./airflow/dags:/usr/local/airflow/dags
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - default
+      - nginx
+
+  airflow_flower:
+    image: airflow-base:1.10.10
+    container_name: airflow_flower
+    restart: always
+    depends_on:
+      - airflow_redis
+    environment:
+      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    command: flower
+    networks:
+      - default
+      - nginx
+
+  airflow_scheduler:
+    image: airflow-base:1.10.10
+    container_name: airflow_scheduler
+    restart: always
+    depends_on:
+      - airflow_webserver
+    volumes:
+      - ./airflow/dags:/usr/local/airflow/dags
+    environment:
+      LOAD_EX: ${AIRFLOW_LOAD_EX}
+      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    command: scheduler
+
+  airflow_worker:
+    image: airflow-base:1.10.10
+    container_name: airflow_worker
+    restart: always
+    depends_on:
+      - airflow_scheduler
+    volumes:
+      - ./airflow/dags:/usr/local/airflow/dags
+    environment:
+      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    command: worker
+
+  airflow_jupyter:
+    image: jupyter/base-notebook:python-3.7.6
+    container_name: airflow_jupyter
+    restart: always
+    networks:
+      - default
+      - nginx
+
+networks:
+  default:
+
+  nginx:
+    external:
+      name: nginx_network

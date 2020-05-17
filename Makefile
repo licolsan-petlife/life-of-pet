@@ -33,6 +33,9 @@ up_elk:
 		elk_kibana \
 		elk_grafana
 
+up_nginx:
+	${DC} up -d nginx
+
 up:
 	${DC} up -d
 

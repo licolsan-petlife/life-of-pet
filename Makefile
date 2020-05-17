@@ -21,6 +21,11 @@ up_airflow:
 		airflow_worker \
 		airflow_jupyter
 
+up_cicd:
+	${DC} up -d \
+		cicd_jenkins \
+		cicd_sonarqube
+
 up_elk:
 	${DC} up -d \
 		elk_elasticsearch \

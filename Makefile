@@ -4,8 +4,9 @@ DC := docker-compose
 build:
 	cd ./airflow && ${D} build --rm --build-arg AIRFLOW_DEPS="datadog,dask" --build-arg PYTHON_DEPS="flask_oauthlib>=0.9" -t airflow-base:1.10.10 .
 
-gen_dnv:
-	cp ./example.env ./.env
+gen_env:
+	cp -r ./env/elk_example/ ./env/elk_test/
+	cp -r ./env/airflow_example/ ./env/airflow_test/
 
 delete:
 	${D} rmi airflow-base:1.0
@@ -23,15 +24,15 @@ up_airflow:
 
 up_cicd:
 	${DC} up -d \
-		cicd_jenkins \
-		cicd_sonarqube
+		jenkins \
+		sonarqube
 
 up_elk:
 	${DC} up -d \
-		elk_elasticsearch \
-		elk_logstash \
-		elk_kibana \
-		elk_grafana
+		elasticsearch \
+		logstash \
+		kibana \
+		grafana
 
 up_nginx:
 	${DC} up -d nginx

@@ -4,10 +4,10 @@
 #
 server.name: kibana
 server.host: "0"
-elasticsearch.hosts: [ "http://elk_elasticsearch:9200" ]
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
 xpack.monitoring.ui.container.elasticsearch.enabled: true
 
 ## X-Pack security credentials
 #
-elasticsearch.username: ${ELK_ELASTIC_USER}
-elasticsearch.password: ${ELK_ELASTIC_PASSWORD}
+elasticsearch.username: ${ELASTIC_USER}
+elasticsearch.password: ${ELASTIC_PASSWORD}

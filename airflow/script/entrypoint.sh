@@ -23,11 +23,6 @@ export \
   AIRFLOW__CORE__FERNET_KEY \
   AIRFLOW__CORE__LOAD_EXAMPLES \
 
-# Install custom python package if requirements.txt is present
-if [ -e "/requirements.txt" ]; then
-    $(command -v pip) install --user -r /requirements.txt
-fi
-
 wait_for_port() {
   local name="$1" host="$2" port="$3"
   local j=0
@@ -46,20 +41,13 @@ wait_for_port() {
 if [ "$AIRFLOW__CORE__EXECUTOR" != "SequentialExecutor" ]; then
   # Check if the user has provided explicit Airflow configuration concerning the database
   if [ -z "$AIRFLOW__CORE__SQL_ALCHEMY_CONN" ]; then
-    # Default values corresponding to the default compose files
-    : "${POSTGRES_HOST:="postgres"}"
-    : "${POSTGRES_PORT:="5432"}"
-    : "${POSTGRES_USER:="airflow"}"
-    : "${POSTGRES_PASSWORD:="airflow"}"
-    : "${POSTGRES_DB:="airflow"}"
-    : "${POSTGRES_EXTRAS:-""}"
 
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}${POSTGRES_EXTRAS}"
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
     export AIRFLOW__CORE__SQL_ALCHEMY_CONN
 
     # Check if the user has provided explicit Airflow configuration for the broker's connection to the database
     if [ "$AIRFLOW__CORE__EXECUTOR" = "CeleryExecutor" ]; then
-      AIRFLOW__CELERY__RESULT_BACKEND="db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}${POSTGRES_EXTRAS}"
+      AIRFLOW__CELERY__RESULT_BACKEND="db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
       export AIRFLOW__CELERY__RESULT_BACKEND
     fi
   else
@@ -81,12 +69,6 @@ fi
 if [ "$AIRFLOW__CORE__EXECUTOR" = "CeleryExecutor" ]; then
   # Check if the user has provided explicit Airflow configuration concerning the broker
   if [ -z "$AIRFLOW__CELERY__BROKER_URL" ]; then
-    # Default values corresponding to the default compose files
-    : "${REDIS_PROTO:="redis://"}"
-    : "${REDIS_HOST:="redis"}"
-    : "${REDIS_PORT:="6379"}"
-    : "${REDIS_PASSWORD:="redis_secret"}"
-    : "${REDIS_DBNUM:="1"}"
 
     # When Redis is secured by basic auth, it does not handle the username part of basic auth, only a token
     if [ -n "$REDIS_PASSWORD" ]; then
@@ -114,7 +96,7 @@ case "$1" in
       # With the "Local" and "Sequential" executors it should all run in one container.
       airflow scheduler &
     fi
-    exec airflow webserver
+    exec airflow "$@"
     ;;
   worker|scheduler)
     # Give the webserver time to run initdb.

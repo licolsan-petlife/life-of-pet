@@ -30,3 +30,9 @@ jupyter
 
 data
 .env
+tmp
+*.pem
+
+/env/airflow
+/env/cicd
+/env/elk

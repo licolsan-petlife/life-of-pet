@@ -14,6 +14,8 @@ services:
   airflow_redis:
     image: redis:3.2.7-alpine
     container_name: airflow_redis
+    env_file:
+      - ./env/airflow/redis.env
     command: redis-server --requirepass redis_secret
     restart: always
 
@@ -21,10 +23,8 @@ services:
     image: postgres:10-alpine
     container_name: airflow_postgres
     restart: always
-    environment:
-      POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
-      POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+    env_file:
+      - ./env/airflow/postgres.env
     volumes:
       - ./postgres:/var/lib/postgresql/data
 
@@ -34,9 +34,8 @@ services:
     restart: always
     depends_on:
       - airflow_postgres
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${AIRFLOW_PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${AIRFLOW_PGADMIN_DEFAULT_PASSWORD}
+    env_file:
+      - ./env/airflow/pgadmin.env
     networks:
       - default
       - nginx
@@ -48,10 +47,10 @@ services:
     depends_on:
       - airflow_postgres
       - airflow_redis
-    environment:
-      LOAD_EX: ${AIRFLOW_LOAD_EX}
-      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    env_file:
+      - ./env/airflow/postgres.env
+      - ./env/airflow/redis.env
+      - ./env/airflow/airflow.env
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
     command: webserver
@@ -70,8 +69,10 @@ services:
     restart: always
     depends_on:
       - airflow_redis
-    environment:
-      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    env_file:
+      - ./env/airflow/postgres.env
+      - ./env/airflow/redis.env
+      - ./env/airflow/airflow.env
     command: flower
     networks:
       - default
@@ -85,10 +86,10 @@ services:
       - airflow_webserver
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
-    environment:
-      LOAD_EX: ${AIRFLOW_LOAD_EX}
-      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    env_file:
+      - ./env/airflow/postgres.env
+      - ./env/airflow/redis.env
+      - ./env/airflow/airflow.env
     command: scheduler
 
   airflow_worker:
@@ -99,9 +100,10 @@ services:
       - airflow_scheduler
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
-    environment:
-      FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      EXECUTOR: ${AIRFLOW_EXECUTOR}
+    env_file:
+      - ./env/airflow/postgres.env
+      - ./env/airflow/redis.env
+      - ./env/airflow/airflow.env
     command: worker
 
   airflow_jupyter:
@@ -112,7 +114,7 @@ services:
       - default
       - nginx
 
-  cicd_jenkins:
+  jenkins:
     image: jenkins:2.60.3-alpine
     container_name: cicd_jenkins
     volumes:
@@ -126,7 +128,7 @@ services:
       - default
       - nginx
 
-  cicd_sonarqube:
+  sonarqube:
     image: sonarqube:7.9.3-community
     container_name: cicd_sonarqube
     volumes:
@@ -140,8 +142,8 @@ services:
       - default
       - nginx
 
-  elk_elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
     container_name: elk_elasticsearch
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -152,11 +154,11 @@ services:
       - 9300:9300
     environment:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
-      ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
-      discovery.type: single-node
+    env_file:
+      - ./env/elk/elasticsearch.env
 
-  elk_logstash:
-    image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.6.2
     container_name: elk_logstash
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
@@ -168,27 +170,26 @@ services:
       - 9600:9600
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
-      ELK_ELASTIC_USER: ${ELK_ELASTIC_USER}
-      ELK_ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
+    env_file:
+      - ./env/elk/elasticsearch.env
     depends_on:
-      - elk_elasticsearch
+      - elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9600"]
       interval: 30s
       timeout: 30s
       retries: 3
 
-  elk_kibana:
-    image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.6.2
     container_name: elk_kibana
     volumes:
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     restart: always
-    environment:
-      ELK_ELASTIC_USER: ${ELK_ELASTIC_USER}
-      ELK_ELASTIC_PASSWORD: ${ELK_ELASTIC_PASSWORD}
+    env_file:
+      - ./env/elk/elasticsearch.env
     depends_on:
-      - elk_elasticsearch
+      - elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5601"]
       interval: 30s
@@ -198,13 +199,11 @@ services:
       - default
       - nginx
 
-  elk_grafana:
+  grafana:
     image: grafana/grafana:6.7.3-ubuntu
     container_name: elk_grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: ${ELK_GF_SECURITY_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${ELK_GF_SECURITY_ADMIN_PASSWORD}
-      GF_INSTALL_PLUGINS: ${ELK_GF_INSTALL_PLUGINS}
+    env_file:
+      - ./env/elk/grafana.env
     networks:
       - default
       - nginx

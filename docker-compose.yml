@@ -10,6 +10,7 @@ services:
       - ./nginx/cert:/etc/nginx/cert
     restart: always
     ports:
+      - 443:443
       - 8080-8083:8080-8083
 
   airflow_redis:

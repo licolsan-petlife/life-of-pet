@@ -10,8 +10,8 @@ services:
       - ./nginx/cert:/etc/nginx/cert
     restart: always
     ports:
+      - 80:80
       - 443:443
-      - 8080-8083:8080-8083
 
   airflow_redis:
     image: redis:3.2.7-alpine
@@ -55,6 +55,7 @@ services:
       - ./env/airflow/airflow.env
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
+      - ./jupyter/data:/dojo
     command: webserver
     healthcheck:
       test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
@@ -112,6 +113,9 @@ services:
     image: jupyter/base-notebook:python-3.7.6
     container_name: airflow_jupyter
     restart: always
+    volumes:
+      - ./jupyter/data:/home/jovyan/work
+      - ./jupyter/data:/dojo
     networks:
       - default
       - nginx

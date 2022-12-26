@@ -1,6 +1,6 @@
 pip==20.1
 setuptools==46.2.0
-wheel==0.34.2
+wheel==0.38.1
 pytz==2020.1
 pyOpenSSL==19.1.0
 ndg-httpsclient==0.5.1
